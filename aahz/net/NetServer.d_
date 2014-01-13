@@ -1,0 +1,266 @@
+module aahz.net.NetServer;
+
+import tango.util.collection.HashMap;
+import tango.core.Thread;
+
+import enet.enet;
+
+import aahz.net.NetManager;
+import aahz.util.ThreadPool;
+import aahz.util.Timer;
+import aahz.net.NetDefines;
+import aahz.net.NetChannel;
+import aahz.net.NetObject;
+
+
+typedef void function() StartupFunc;
+typedef void function() ShutdownFunc;
+typedef bool function(char[] username, char[] password) ConnectFunc;
+typedef void function() DisconnectFunc;
+typedef ServerChannel function(char[] channelName, char[] password) JoinChannelFunc;
+typedef void function(ServerChannel) LeaveChannelFunc;
+
+
+class NetServer : NetManager {
+private:
+	const uint THREAD_COUNT = 8;
+	
+	static uint[THREAD_COUNT] m_threadClient;	// Holds the clientID being managed by the thread, as indexed by thread.id
+	static NetBuffer[THREAD_COUNT] m_threadBuffer;
+	
+	static HashMap!(uint, ENetPeer*) m_clients;
+	static HashMap!(char[], ServerChannel) m_channels;
+	static HashMap!(ubyte[5], ServerChannel) m_clientChannels;
+	
+	static StartupFunc m_onStartup;
+	static ShutdownFunc m_onShutdown;
+	static ConnectFunc m_onConnect;
+	static DisconnectFunc m_onDisconnect;
+	static JoinChannelFunc m_onJoinChannel;
+	static LeaveChannelFunc m_onLeaveChannel;
+	
+	static void handleEvent(ENetEvent e) {
+		UserData uData;
+		
+		switch (event.type) {
+		case ENetEventType.ENET_EVENT_TYPE_CONNECT:
+			synchronized (m_clients) {
+				uint clientID = event.peer.sessionID;
+				m_clients.add(clientID, event.peer);
+			}
+			
+		break;
+		case ENetEventType.ENET_EVENT_TYPE_RECEIVE:
+			uint threadID = Thread.getThis.id;
+			uint clientID = cast(uint)event.peer.data;
+			m_threadClient[threadID] = clientID;
+			
+			if (event.channelID != 0) {	// Object channels
+				ubyte[5] accessor;
+				ubyte* ptr = cast(ubyte*)&clientID;
+				
+				accessor[0] = event.channelID;
+				accessor[1] = ptr[0];
+				accessor[2] = ptr[1];
+				accessor[3] = ptr[2];
+				accessor[4] = ptr[3];
+				
+				ServerChannel channel;
+				synchronized (m_clientChannels) {
+					channel = m_clientChannels.get(accessor);
+				}
+				m_threadBuffer[threadID].slurp(event.packet.data, event.packet.dataLength);
+				channel.doStuff(clientID, m_threadBuffer[threadID]);
+			}
+			else {	// Channel 0 -- Server channel
+				ENetPacket* packet;
+				NetCommand command;
+				NetBuffer buffer = new NetBuffer(data);
+				buffer.read(command);
+				
+				switch (command) {
+				LOGIN:
+					char[] username;
+					char[] password;
+					buffer.read(username);
+					buffer.read(password);
+					
+					if (m_onConnect(username, password)) {	// Successful login -- Let them know
+						buffer = new NetBuffer(
+							NetBuffer.measure!(ubyte)(NetCommand.LOGIN)
+							+ NetBuffer.measure!(bool)(true)
+						);
+						buffer.write(NetCommand.LOGIN);
+						buffer.write(true);
+						
+						packet = enet_packet_create(buffer.data.ptr, buffer.data.length, ENET_PACKET_FLAG_RELIABLE | ENET_PACKET_FLAG_NO_ALLOCATE);
+						enet_peer_send(event.peer, 0, packet);
+						synchronized (m_self) {
+							enet_host_flush(m_self);
+						}
+					}
+					else {	// Failed -- Let them know
+						buffer = new NetBuffer(
+							NetBuffer.measure!(ubyte)(NetCommand.LOGIN)
+							+ NetBuffer.measure!(bool)(false)
+						);
+						buffer.write(NetCommand.LOGIN);
+						buffer.write(false);	// failed
+						
+						packet = enet_packet_create(buffer.data.ptr, buffer.data.length, ENET_PACKET_FLAG_RELIABLE | ENET_PACKET_FLAG_NO_ALLOCATE);
+						enet_peer_send(event.peer, 0, packet);
+						synchronized (m_self) {
+							enet_host_flush(m_self);
+						}
+					}
+				break;
+				JOIN_CHANNEL:
+					// ubyte:JOIN_CHANNEL, ubyte:channelID, char[]:channelName, char[]:password
+					ubyte channelID;
+					char[] channelName;
+					char[] password;
+					
+					m_threadBuffer[threadID].slurp(event.packet.data, event.packet.dataLength);	// stick data in NetBuffer for this thread
+
+					m_threadBuffer[threadID].read(channelID);
+					m_threadBuffer[threadID].read(channelName);
+					m_threadBuffer[threadID].read(password);
+					
+					try {
+						ServerChannel channel = m_onJoinChannel(channelName, password);
+						
+						ubyte[5] accessor;
+						ubyte* ptr = cast(ubyte*)&clientID;
+						
+						accessor[0] = channelID;
+						accessor[1] = ptr[0];
+						accessor[2] = ptr[1];
+						accessor[3] = ptr[2];
+						accessor[4] = ptr[3];
+						
+						synchronized (m_clientChannels) {
+							m_clientChannels.add(accessor, channel);
+						}
+					}
+					catch (Exception e) {
+						// ubyte:EXCEPTION, uint:clientID, char[]:text
+						m_threadBuffer[threadID].reset(
+							NetBuffer.measure!(ubyte)(NetCommand.EXCEPTION)
+							+ NetBuffer.measure!(uint)(clientID)
+							+ NetBuffer.measure!(char[])(e.msg)
+						);
+						m_threadBuffer[threadID].write(NetCommand.EXCEPTION);
+						m_threadBuffer[threadID].write(clientID);
+						m_threadBuffer[threadID].write(e.msg);
+						
+						sendData(clientID, channelID, m_threadBuffer[threadID]);
+					}
+					
+				break;
+				}
+			}
+
+			/* Clean up the packet now that we're done using it. */
+			enet_packet_destroy (event.packet);
+		break;
+		case ENetEventType.ENET_EVENT_TYPE_DISCONNECT:
+			uint clientID = cast(uint)event.peer.sessionID;
+			m_threadClient[Thread.getThis.id] = clientID;
+			
+			m_onDisconnect();
+			
+			synchronized (m_clients) {
+				m_clients.removeKey(clientID);
+			}
+			
+		break;
+		}
+	}
+	
+public:
+	static this() {
+		 m_clients = new HashMap!(uint, ENetPeer*);
+		 for (uint L = 0; L < THREAD_COUNT; L++) {
+			 m_threadBuffer = new NetBuffer(256);
+		 }
+	}
+	
+	static void setCallbacks(
+		StartupFunc onStartup,
+		ShutdownFunc onShutdown,
+		ConnectFunc onConnect,
+		DisconnectFunc onDisconnect,
+		JoinChannelFunc onJoinChannel,
+		LeaveChannelFunc onLeaveChannel
+	) {
+		m_onStartup = onStartup;
+		m_onShutdown = onShutdown;
+		m_onConnect = onConnect;
+		m_onDisconnect = onDisconnect;
+		m_onJoinChannel = onJoinChannel;
+		m_onLeaveChannel = onLeaveChannel;
+	}
+
+	static void run(ushort port, uint threadCount) {
+		int res;
+		bool keepGoing = true;
+		ENetAddress address;
+		
+		m_location = NetLocation.SERVER;
+		
+		res = enet_initialize();
+		if (res != 0) throw new Exception("Couldn't init enet");
+		scope(exit) enet_deinitialize();
+		
+		address.host = ENET_HOST_ANY;
+		address.port = port;
+		
+		m_self = enet_host_create(
+			&address,
+			100_000_000,	// unlimited, essentially?
+			0,	// unlimited
+			0	// ditto
+		);
+		if (m_self == null) throw new Exception("Couldn't create host");
+		scope(exit) enet_host_destroy(m_self);
+		m_connected = true;
+		
+		m_onStartup();
+		
+		FThreadPool!() threadPool = new FThreadPool!()(threadCount);
+		while (keepGoing) {
+			ENetEvent event;
+			synchronized (m_self) {
+				res = enet_host_check_events(m_self, &event);
+			}
+			if (res > 0) {
+				threadPool.addJob(&handleEvent, event);
+			}
+			else if (res < 0) {
+				throw new Exception("Enet error");	// Hopefully we'll never get here
+			}
+			else {
+				Thread.sleep(0.01);	// Let any active threads do their work
+			}
+		}
+		threadPool.shutdown(true);
+		
+		m_onShutdown();
+	}
+	
+	static void clientID() {
+		return m_threadClient[ Thread.getThis.id ];
+	}
+	
+	static void sendData(uint clientID, ubyte channelID, NetBuffer buffer) {
+		synchronized (m_clients) {
+			ENetPeer* peer = m_clients.get(clientID);
+		}
+		
+		ENetPacket* packet = enet_packet_create(buffer.data.ptr, buffer.data.length, ENET_PACKET_FLAG_RELIABLE | ENET_PACKET_FLAG_NO_ALLOCATE);
+		enet_peer_send(peer, 0, packet);
+		synchronized (m_self) {
+			enet_host_flush(m_self);
+		}
+	}
+}

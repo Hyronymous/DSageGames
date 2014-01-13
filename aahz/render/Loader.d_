@@ -1,0 +1,109 @@
+module aahz.render.Loader;
+
+import aahz.render.Model;
+
+template Loader(T) {
+	Model!(T) loadFile(char* path) {
+		FileInputStream in = new FileInputStream(path);
+		
+		try {
+			byte[] identifier = new byte[10];
+			in.read(identifier);
+			
+			if ((new String(identifier)).compareTo("MS3D000000") != 0) {
+				in.close();
+				throw new Exception("Invalid file type.");
+			}
+			
+			byte[] word = new byte[2];
+			byte[] dword = new byte[4];
+			byte[] floating = new byte[4];
+			ByteBuffer bb = BufferUtil.newByteBuffer(4);
+
+			in.read(dword);
+			int version = (dword[3] << 24) | (dword[2] << 16) | (dword[1] << 8) | dword[0];
+			
+			in.read(word);
+			int nNumVertices = (word[1] << 8) | word[0];
+			float[][] v = new float[nNumVertices][3];
+			for (int L = 0; L < nNumVertices; L++) {
+				in.skip(1);
+
+				in.read(floating); bb.put(0, floating[0]); bb.put(1, floating[1]); bb.put(2, floating[2]); bb.put(3, floating[3]);
+				v[L][0] = bb.getFloat(0);
+				in.read(floating); bb.put(0, floating[0]); bb.put(1, floating[1]); bb.put(2, floating[2]); bb.put(3, floating[3]);
+				v[L][1] = bb.getFloat(0);
+				in.read(floating); bb.put(0, floating[0]); bb.put(1, floating[1]); bb.put(2, floating[2]); bb.put(3, floating[3]);
+				v[L][2] = bb.getFloat(0);
+
+				in.skip(2);
+			}
+			
+			
+			in.read(word);
+			triangleCount = (word[1] << 8) | word[0];
+			triangleCount9 = triangleCount * 9;
+			vertexes = new double[triangleCount9];
+			normals = new double[triangleCount9];
+			colors = new double[triangleCount9];
+			center = new Vertex(0, 0, 0);
+			
+			int curr = 0;
+			for (int L = 0; L < triangleCount9; L += 9) {
+				in.skip(2);
+
+				in.read(word);
+				int index1 = (word[1] << 8) | word[0];
+				in.read(word);
+				int index2 = (word[1] << 8) | word[0];
+				in.read(word);
+				int index3 = (word[1] << 8) | word[0];
+				
+				vertexes[L] = v[index1][0];
+				vertexes[L + 1] = v[index1][1];
+				vertexes[L + 2] = v[index1][2];
+				vertexes[L + 3] = v[index2][0];
+				vertexes[L + 4] = v[index2][1];
+				vertexes[L + 5] = v[index2][2];
+				vertexes[L + 6] = v[index3][0];
+				vertexes[L + 7] = v[index3][1];
+				vertexes[L + 8] = v[index3][2];
+				
+				in.read(floating); bb.put(0, floating[0]); bb.put(1, floating[1]); bb.put(2, floating[2]); bb.put(3, floating[3]);
+				normals[L] = bb.getFloat(0);
+				in.read(floating); bb.put(0, floating[0]); bb.put(1, floating[1]); bb.put(2, floating[2]); bb.put(3, floating[3]);
+				normals[L + 1] = bb.getFloat(0);
+				in.read(floating); bb.put(0, floating[0]); bb.put(1, floating[1]); bb.put(2, floating[2]); bb.put(3, floating[3]);
+				normals[L + 2] = bb.getFloat(0);
+				in.read(floating); bb.put(0, floating[0]); bb.put(1, floating[1]); bb.put(2, floating[2]); bb.put(3, floating[3]);
+				normals[L + 3] = bb.getFloat(0);
+				in.read(floating); bb.put(0, floating[0]); bb.put(1, floating[1]); bb.put(2, floating[2]); bb.put(3, floating[3]);
+				normals[L + 4] = bb.getFloat(0);
+				in.read(floating); bb.put(0, floating[0]); bb.put(1, floating[1]); bb.put(2, floating[2]); bb.put(3, floating[3]);
+				normals[L + 5] = bb.getFloat(0);
+				in.read(floating); bb.put(0, floating[0]); bb.put(1, floating[1]); bb.put(2, floating[2]); bb.put(3, floating[3]);
+				normals[L + 6] = bb.getFloat(0);
+				in.read(floating); bb.put(0, floating[0]); bb.put(1, floating[1]); bb.put(2, floating[2]); bb.put(3, floating[3]);
+				normals[L + 7] = bb.getFloat(0);
+				in.read(floating); bb.put(0, floating[0]); bb.put(1, floating[1]); bb.put(2, floating[2]); bb.put(3, floating[3]);
+				normals[L + 8] = bb.getFloat(0);
+				
+				in.skip(
+					(3 * 4)
+					+ (3 * 4)
+					+ 2
+				);
+			}
+			
+			in.close();
+			return;
+		}
+		catch (Exception e) {
+			in.close();
+		}
+		throw new Exception("Wrong file type or incomplete data.");
+	}
+}
+
+alias Loader!(double) DLoader;
+alias Loader!(float) FLoader;

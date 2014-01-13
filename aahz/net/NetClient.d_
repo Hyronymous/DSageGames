@@ -1,0 +1,245 @@
+module aahz.net.NetClient;
+
+import tango.util.collection.TreeMap;
+import tango.core.Thread;
+
+import enet.enet;
+
+import aahz.net.NetManager;
+import aahz.util.Queue;
+import aahz.util.ThreadPool;
+import aahz.util.Timer;
+import aahz.net.NetDefines;
+import aahz.net.ClientChannel;
+import aahz.net.NetObject;
+
+class ClientDisconnectException : Exception {}
+
+class NetClient : NetManager {
+private:
+	const uint MAX_CHANNEL_COUNT = ubyte.max - 1;
+	class ChannelJoin {
+		NetChannel m_channel;
+		bool m_result = false;
+		Timer m_timeout;
+		
+		this(NetChannel channel) {
+			m_timeout = new Timer(&doTimeout, 5.0);	// Wake ourselves up if we haven't connected within 10 seconds
+		}
+		
+		void doTimeout() {
+			synchronized (channel.m_outgoing) {
+				if (cj.m_outgoing.state == Fiber.HOLD) channel.m_outgoing.call();
+			}
+		}
+	}
+	
+	static IDManager m_channelIDManager;
+	static ENetPeer* m_server = null;
+
+	static TreeMap!(char[], ChannelJoin) m_channelJoin;
+	static TreeMap!(ubyte, NetChannel) m_channels;
+	
+public:
+	static this() {
+		m_channelIDManager = new IDManager(1, MAX_CHANNEL_COUNT);
+		m_channelJoin = TreeMap!(char[], ChannelJoin);
+		m_channels = TreeMap!(ubyte, NetChannel);
+	}
+
+	static void open(char[] ip, ushort port) {
+		int res;
+		ENetAddress address;
+		ENetEvent event;
+
+		m_location = NetLocation.CLIENT;
+		scope(success) m_connected = true;
+		
+		res = enet_initialize();
+		if (res != 0) throw new Exception("Couldn't init enet");
+		scope(failure) enet_deinitialize();
+		
+		m_self = enet_host_create(
+			null,
+			1,
+			0,
+			0
+		);
+		if (m_self == null) throw new Exception("Couldn't create host");
+		scope(failure) enet_host_destroy(m_self);
+		
+		res = enet_address_set_host(&address, (ip ~ "\0").ptr);
+		if (res != 0) throw new Exception("Invalid IP address");
+		address.port = port;
+		
+		m_server = enet_host_connect(m_self, &address, MAX_CHANNEL_COUNT + 1);	// +1 for channel 0 which is special
+		if (m_server == null) throw new Exception("Couldn't find server");
+		scope(failure) enet_peer_reset(m_server);
+		
+		res = enet_host_service (m_self, &event, 5_000);
+		if (res < 0) {
+			throw new Exception("Couldn't connect to server");
+		}
+		else if (res == 0) {
+			throw new Exception("Connection timed out");
+		}
+	}
+	
+	static void close() {
+		if (m_connected) {
+			m_connected = false;
+			enet_peer_reset(m_server);
+			enet_host_destroy(m_self);
+			enet_deinitialize();
+		}
+	}
+	
+	static void login(char[] username, char[] password) {
+		ubyte[] data;
+		ubyte command;
+		bool loginRes;
+		ENetPacket* packet;
+
+		NetBuffer buffer = new NetBuffer(
+			NetBuffer.measure!(ubyte)(NetCommand.LOGIN)	// NetCommand
+			+ NetBuffer.measure!(char[])(username)	// Channel name
+			+ NetBuffer.measure!(char[])(password)	// Password
+		);
+		buffer.write(NetCommand.LOGIN);
+		buffer.write(username);
+		buffer.write(password);
+
+		packet = enet_packet_create(buffer.data.ptr, buffer.data.length, ENET_PACKET_FLAG_RELIABLE | ENET_PACKET_FLAG_NO_ALLOCATE);
+		enet_peer_send(m_server, 0, packet);
+		enet_host_flush(m_self);
+		
+		res = enet_host_service (m_self, &event, 5_000);
+		if (res < 0) {
+			throw new Exception("Couldn't connect to server");
+		}
+		else if (res == 0) {
+			throw new Exception("Connection timed out");
+		}
+
+		data = event.packet.data[0..event.packet.dataLength];
+		buffer = new NetBuffer(data);
+		buffer.read(command);
+		buffer.read(loginRes);
+		
+		if (	// Possibly we got disconnected and tried to reconnect while the server was still sending old packets?
+			event.channelID != 0
+			|| event.type != ENetEventType.ENET_EVENT_TYPE_RECEIVE
+			|| command != NetCommand.LOGIN
+		) {
+			throw new Exception("Data format error. Please try again in a few seconds");
+		}
+		else if (loginRes == false) {
+			throw new Exception("Login failed. Please check username and password.");
+		}
+	}
+	
+	static void runEvents() {
+		ENetEvent event;
+		
+		while (enet_host_check_events(m_self, &event) > 0) {
+			ubyte channelID = event.channelID;
+			
+			if (event.type != ENetEventType.ENET_EVENT_TYPE_RECEIVE) {
+				if (event.type == ENetEventType.ENET_EVENT_TYPE_DISCONNECT) {
+					throw new ClientDisconnectException("Server disconnected");
+				}
+				else {	// ENET_EVENT_TYPE_NONE? ENET_EVENT_TYPE_CONNECT?? Who knows
+					continue;
+				}
+			}
+			
+			if (channelID != 0) {	// Object channels
+				NetChannel channel = m_channels.get(channelID);
+				ubyte[] data = event.packet.data[0..event.packet.dataLength];
+				NetBuffer buffer = new NetBuffer(data);
+				
+				channel.doStuff(buffer);
+			}
+			else {	// channelID == 0
+				ubyte[] data = event.packet.data[0..event.packet.dataLength];
+				NetBuffer buffer = new NetBuffer(data);
+				NetCommand command;
+				buffer.read(command);
+				
+				switch (command) {
+				JOIN_CHANNEL:	// result of channel join
+					char[] channelName;
+					bool joinRes;
+					
+					buffer.read(channelName);
+					buffer.read(joinRes);
+					
+					ChannelJoin cj = m_channelJoin.get(channelName);	// Don't remove it from the collection
+					cj.result = joinRes;
+					if (cj.m_outgoing.state == Fiber.HOLD) cj.m_outgoing.call();
+				break;
+				SERVER_DOWN_15:
+				
+				break;
+				SERVER_DOWN_10:
+				
+				break;
+				SERVER_DOWN_5:
+				
+				break;
+				}
+			}
+		}
+	}
+	
+	static void joinChannel(NetChannel channel, char[] password) {
+		if (m_location == NetLocation.SERVER) throw new Exception("Not a server action");
+		if (channel.m_name.length > 50) throw new Exception("Channel name is too long");
+		if (password.length > 50) throw new Exception("Password is too long");
+
+		ubyte channelID = m_enetChannel.getID();	// channel ID
+		scope(failure) m_enetChannel.releaseID(channelID);
+		
+		scope ChannelJoin cj = new ChannelJoin(channel);
+		synchronized (m_channelJoin) {	// Add ourselves so that threadMain can know to wake us back up
+			m_channelJoin.add(channel.m_name, cj);
+		}
+		
+		NetBuffer buffer = new NetBuffer(
+			NetBuffer.measure!(ubyte)(NetCommand.JOIN_CHANNEL)	// NetCommand
+			+ NetBuffer.measure!(ubyte)(channelID)	// What channel we'll be on
+			+ NetBuffer.measure!(char[])(channel)	// Channel name
+			+ NetBuffer.measure!(char[])(password)	// Password
+		);
+		buffer.write(NetCommand.JOIN_CHANNEL);
+		buffer.write(channelID);
+		buffer.write(channel);
+		buffer.write(password);
+
+		ENetPacket* packet = enet_packet_create(buffer.data.ptr, buffer.data.length, ENET_PACKET_FLAG_RELIABLE | ENET_PACKET_FLAG_NO_ALLOCATE);
+		
+		enet_peer_send(m_server, 0, packet);
+		synchronized (m_self) {
+			enet_host_flush(m_self);
+		}
+		Fiber.yield(); 	// Wait for response to wake me up
+		
+//		ChannelJoin cj;
+//		synchronized (m_channelJoin) {
+//			cj = m_channelJoin.get(channel.m_name);
+//			m_channelJoin.remove(channel.m_name);
+//		}
+//		if (cj.result == false) throw new Exception("Failed channel join");
+		
+		channel.setReliableChannel(channelID);
+		m_channels.add(channelID, channel);
+	}
+	
+	static void leaveChannel(NetChannel channel) {
+		
+	}
+	
+	static void sendData(NetChannel channel, byte[] data) {
+		
+	}
+}

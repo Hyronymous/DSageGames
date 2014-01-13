@@ -1,0 +1,146 @@
+module aahz.net.NetObject;
+
+import tango.util.collection.TreeMap;
+import tango.core.Thread;
+
+abstract class NetObject {
+public:
+	char[] m_name;
+	
+	this(char[] name) {
+		m_name = name.dup;
+	}
+	void setChannel(Channel c);
+}
+
+abstract class ClientObject : NetObject {
+private:
+	ClientChannel m_channel;
+	
+	typedef NetBuffer delegate(NetBuffer) NetMethod;
+	TreeMap!(char[], NetMethod) p_methods;
+
+	void internalSendMyself();
+
+public:
+	this(char[] name) {
+		super(name);
+		p_methods = new TreeMap!(char[], NetMethod);
+	}
+	
+	~this() {
+		if (m_channel !is null) {
+			m_channel.removeObject(this);
+		}
+	}
+	
+	void setChannel(Channel c) {
+		if (m_channel !is null) {
+			m_channel.removeObject(this);
+		}
+		m_channel = c;
+		m_channel.addObject(this);
+	}
+	
+	NetBuffer internalDoCommand(NetBuffer buffer) {
+		char[] name;
+		buffer.read(name);
+		NetMethod method = p_methods.get(name);
+		return method(buffer);
+	}
+}
+
+abstract class ClientObjectLink : NetObject {
+private:
+	ClientChannel m_channel;
+	uint m_clientID;
+	
+	Object m_counterLock;
+	uint m_resCounter = 0;
+	NetBuffer m_result;
+	bool m_gotResult;
+	
+	TreeMap!(uint, Fiber) p_resultFibers;
+	
+public:
+	this(char[] name, uint clientID) {
+		super(name);
+		m_clientID = clientID;
+		m_counterLock = new Object;
+		p_resultFibers = new TreeMap!(uint, Fiber);
+	}
+	
+	~this() {
+		if (m_channel !is null) {
+			m_channel.removeLink(this);
+		}
+	}
+	
+	void setChannel(Channel c) {
+		if (m_channel !is null) {
+			m_channel.removeLink(this);
+		}
+		m_channel = c;
+		m_channel.addLink(this);
+	}
+	
+	void internalUpdateData(NetBuffer);
+	
+	void internalDoResult(NetBuffer buffer) {
+		uint resID;
+		Fiber f;
+		
+		buffer.read(resID);
+		f = p_resultFibers.get(resID);
+		
+		synchronized (m_result) {	// Pass the result 
+			m_result = buffer;
+			m_gotResult = false;
+			
+			f.call();
+			
+			do {	// Sort of ugly...no obvious other solution though
+				Thread.sleep(0.001);
+			}
+			while (m_gotResult == false);
+		}
+	}
+}
+
+abstract class ServerObject : NetObject {
+private:
+	ServerChannel m_channel;
+	typedef NetBuffer delegate(NetBuffer) NetMethod;
+	TreeMap!(char[], NetMethod) p_methods;
+	
+public:
+	this(char[] name) {
+		super(name);
+		p_methods = new TreeMap!(char[], NetMethod);
+	}
+	
+	~this() {
+		synchronized (m_channel) {
+			if (m_channel !is null) {
+				m_channel.removeObject(this);
+			}
+		}
+	}
+	
+	void setChannel(Channel c) {
+		synchronized (m_channel) {
+			if (m_channel !is null) {
+				m_channel.removeObject(this);
+			}
+			m_channel = c;
+			m_channel.addObject(this);
+		}
+	}
+	
+	NetBuffer internalDoCommand(NetBuffer buffer) {
+		char[] name;
+		buffer.read(name);
+		NetMethod method = p_methods.get(name);
+		return method(buffer);
+	}
+}

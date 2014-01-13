@@ -1,0 +1,156 @@
+module aahz.net.ClientChannel;
+
+import tango.core.Thread;
+import tango.text.convert.Integer;
+import tango.util.collection.TreeMap;
+
+import aahz.net.NetDefines;
+import aahz.net.NetManager;
+import aahz.net.NetObject;
+
+abstract class ClientChannel {
+private:
+	enum ChannelState {
+		JOIN_CHANNEL,
+		LEAVE_CHANNEL,
+		SEND_DATA,
+		RECEIVE_DATA,
+		DEAD
+	}
+	char[] m_name;
+	ChannelState m_state = ChannelState.JOIN_CHANNEL;
+	bool m_connected = false;
+	ubyte m_channelID;
+	
+	TreeMap!(char[], ClientObject) m_objects;
+	HashMap!(char[], ClientObjectLink) m_links;	// Using a HashMap since there will probably be more objects
+	
+	void outgoingMain() {
+		while (m_state != DEAD) {
+			switch (m_state) {
+			case ChannelState.JOIN_CHANNEL:
+				try {
+					NetManager.joinChannel(this, password);
+					m_connected = true;
+					onJoin();
+				}
+				catch (Exception e) {
+					m_state = DEAD;
+				}
+			break;
+			case ChannelState.LEAVE_CHANNEL:
+				onLeave();
+				m_connected = false;
+				NetManager.leaveChannel(this);
+				m_state = DEAD;
+			break;
+			case ChannelState.SEND_DATA:
+				
+			break;
+			case ChannelState.RECEIVE_DATA:
+			
+			break;
+			}
+			
+			if (m_state != DEAD) {
+				Fiber.yield();
+			}
+		}
+	}
+	
+public:
+	this(char[] name, char[] password = "") {
+		this.m_name = name.dup;
+		m_objects = new TreeMap!(char[], ClientObject);
+		m_links = new HashMap!(char[], ClientObjectLink);
+		
+		m_outgoing = new Fiber(&outgoingMain);
+		m_outgoing.call();
+	}
+	
+	~this() {
+		if (m_connected) synchronized (m_outgoing) {
+			m_state = LEAVE_CHANNEL;
+			while (m_state != ChannelState.DEAD) {}	// Wait for thread to complete
+		}
+	}
+	
+	void onJoin(uint clientID);	// Someone else joined the channel
+	void onLeft(uint clientID);	// Someone else left the channel
+	void onMessage(char[] message);
+	void onObjectChanged(NetObjectLink nLink);
+	
+	/* Functions below should only be called by NetClient */
+	void setChannel(ubyte channel) {
+		m_channelID = channel;
+	}
+	
+	void doStuff(NetBuffer buffer) {
+		NetCommand command;
+		char[] objectName;
+		char[] linkName;
+		uint clientID;
+		ClientObject nObj;
+		ClientObjectLink nLink;
+		
+		buffer.read(command);
+		switch (command) {
+		COMMAND:	// request for a ClientObject function
+			buffer.read(objectName);
+			nObj = m_objects.get(objectName);
+			NetBuffer resBuffer = nObj.internalDoCommand(buffer);
+			if (resBuffer !is null) {	// send back result
+				// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			}
+		break;
+		RESULT:	// result of a call to a ClientObjectLink (remote) function
+			buffer.read(clientID);
+			buffer.read(objectName);
+			linkName = toString(clientID) ~ "::" ~ objectName;
+			
+			nLink = m_links.get(linkName);
+			nLink.internalDoResult(buffer);
+		break;
+		DATA:
+			buffer.read(clientID);
+			buffer.read(objectName);
+			linkName = toString(clientID) ~ "::" ~ objectName;
+			
+			nLink = m_links.get(linkName);
+			nLink.internalUpdateData(buffer);
+		break;
+		MESSAGE:
+			char[] message;
+			buffer.read(message);
+			onMessage(message);
+		break;
+		}
+	}
+	
+	/* Functions below should only be called by ClientObject/ClientObjectLink */
+	void addObject(ClientObject nObj) {
+		synchronized (m_objects) {
+			m_objects.add(nObj.m_name, nObj);
+		}
+	}
+	
+	void removeObject(ClientObject nObj) {
+		synchronized (m_objects) {
+			m_objects.removeKey(nObj.m_name);
+		}
+	}
+	
+	void addLink(ClientObjectLink nLink) {
+		synchronized (m_links) {
+			char[] linkName = Integer.toString(nLink.m_clientID) ~ "::" ~ nLink.m_name;
+			m_links.add(linkName, nLink);
+		}
+	}
+	
+	void removeLink(ClientObjectLink nLink) {
+		synchronized (m_links) {
+			char[] linkName = Integer.toString(nLink.m_clientID) ~ "::" ~ nLink.m_name;
+			m_links.removeKey(linkName);
+		}
+	}
+}

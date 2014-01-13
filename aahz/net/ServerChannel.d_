@@ -1,0 +1,167 @@
+module aahz.net.ServerChannel;
+
+import aahz.net.NetDefines;
+import aahz.net.NetServer;
+import aahz.net.NetObject;
+
+import tango.util.collection.HashSet;
+
+class ServerChannel {
+private:
+	HashMap!(uint, ubyte) m_clients;	// users in channel
+	HashMap!(char[], ServerObject) m_objects;	// Objects attached to channel
+
+	NetBuffer m_commandBuffer;	// For general reuse
+	NetBuffer m_resultBuffer;
+	NetBuffer m_dataBuffer;
+	NetBuffer m_messageBuffer;
+	NetBuffer m_exceptionBuffer;
+	NetBuffer m_addBuffer;
+	NetBuffer m_removeBuffer;
+	
+public:
+	char[] m_password;
+
+	this(char[] password) {
+		m_clients = new HashMap!(uint);
+		m_password = password.dup;
+		
+		m_commandBuffer = new NetBuffer(256);
+		m_resultBuffer = new NetBuffer(256);
+		m_dataBuffer = new NetBuffer(256);
+		m_messageBuffer = new NetBuffer(256);
+		m_exceptionBuffer = new NetBuffer(256);
+		m_addBuffer = new NetBuffer(
+			NetBuffer.measure!(ubyte)(NetCommand.JOIN_CHANNEL)
+			+ NetBuffer.measure!(uint)(clientID)
+		);
+		m_removeBuffer = new NetBuffer(
+			NetBuffer.measure!(ubyte)(NetCommand.JOIN_CHANNEL)
+			+ NetBuffer.measure!(uint)(clientID)
+		);
+	}
+	
+	void doStuff(uint senderID, NetBuffer buffer) {
+		NetCommand command;
+		
+		buffer.read(command);
+		
+		switch (command) {
+		COMMAND:	// Check if it's a command for a server object, otherwise reroute it
+			// ubyte:COMMAND, uint:clientID, char[]:object, char[]:method, ...
+			
+			uint clientID;
+			buffer.read(clientID);	// Get the recipient
+			if (clientID != 0) {	// Not targeting a server object
+				ubyte channelID;
+				buffer.rewind();
+				synchronized (m_clients) {
+					channelID = m_clients.get(clientID);
+				}
+				NetServer.sendData(clientID, channelID, buffer);
+			}
+			else {	// Server object
+				char[] objName;
+				buffer.read(objName);
+				
+				ServerObject nObj;
+				synchronized (m_objects) {
+					nObj = m_objects.get(objName);
+				}
+				NetBuffer resBuffer = nObj.internalDoCommand(buffer);
+				
+				if (resBuffer !is null) {
+					synchronized (m_commandBuffer) {
+						// ubyte:RESULT, uint:clientID, *:res
+						m_commandBuffer.reset(
+							NetBuffer.measure!(ubyte)(NetCommand.RESULT)
+							+ NetBuffer.measure!(uint)(senderID)
+						);
+						m_commandBuffer.write(NetCommand.RESULT);
+						m_commandBuffer.write(senderID);
+						m_commandBuffer ~= resBuffer;
+						
+						synchronized (m_clients) {
+							channelID = m_clients.get(senderID);
+						}
+						
+						NetServer.sendData(senderID, channelID, m_commandBuffer);
+					}
+				}
+			}
+		break;
+		
+		MESSAGE:	// reroute data to all clients
+		DATA:
+			synchronized (m_clients) {
+				foreach (clientID, channelID; m_clients) {
+					if (clientID == senderID) continue;	// Don't send back to the originator
+					NetServer.sendData(clientID, channelID, buffer);
+				}
+			}
+		break;
+		
+		EXCEPTION:	// reroute to single client
+		RESULT:
+		MESSAGE_SINGLE:
+			// ubyte:MESSAGE_SINGLE, uint:clientID, ...
+			// ubyte:RESULT, uint:clientID, *:res
+			// ubyte:EXCEPTION, uint:clientID, char[]:text
+			{	// create local data
+				uint clientID;
+				ubyte channelID;
+				buffer.read(clientID);
+				
+				synchronized (m_clients) {
+					channelID = m_clients.get(clientID);
+				}
+				NetServer.sendData(clientID, channelID, buffer);
+			}
+		break;
+		}
+	}
+
+	void addClient(uint clientID, ubyte channelID) {
+		synchronized (m_addBuffer) {
+			m_addBuffer.unwind();
+			
+			m_addBuffer.write(NetCommand.JOIN_CHANNEL);
+			m_addBuffer.write(clientID);
+			
+			synchronized (m_clients) {
+				foreach (client, channel; m_clients) {
+					NetServer.sendData(clientID, channelID, m_addBuffer);
+				}
+				m_clients.add(clientID, channelID);
+			}
+		}
+	}
+	
+	void removeClient(uint clientID) {
+		synchronized (m_removeBuffer) {
+			m_removeBuffer.unwind();
+			
+			m_removeBuffer.write(NetCommand.LEAVE_CHANNEL);
+			m_removeBuffer.write(clientID);
+			
+			synchronized (m_clients) {
+				foreach (client, channel; m_clients) {
+					NetServer.sendData(clientID, channelID, m_removeBuffer);
+				}
+				m_clients.removeAll(clientID);
+			}
+		}
+	}
+	
+	void addObject(ServerObject nObj) {
+		synchronized (m_objects) {
+			m_objects.add(nObj.m_name, nObj);
+		}
+	}
+	
+	void removeObject(ServerObject nObj) {
+		synchronized (m_objects) {
+			m_objects.removeKey(nObj.m_name);
+		}
+	}
+}

@@ -1,0 +1,29 @@
+<project out="sagegames" type="exe" def="sagegames.def">
+	<libs>
+		<lib path="lib/DerelictAL.lib" />
+		<lib path="lib/DerelictFT.lib" />
+		<lib path="lib/DerelictGL.lib" />
+		<lib path="lib/DerelictGLU.lib" />
+		<lib path="lib/DerelictIL.lib" />
+		<lib path="lib/DerelictILU.lib" />
+		<lib path="lib/DerelictILUT.lib" />
+		<lib path="lib/DerelictODE.lib" />
+		<lib path="lib/DerelictOgg.lib" />
+		<lib path="lib/DerelictSDL.lib" />
+		<lib path="lib/DerelictSDLImage.lib" />
+		<lib path="lib/DerelictSDLMixer.lib" />
+		<lib path="lib/DerelictSDLNet.lib" />
+		<lib path="lib/DerelictSDLttf.lib" />
+		<lib path="lib/DerelictUtil.lib" />
+		<lib path="lib/DerelictVorbis.lib" />
+		<lib path="lib/sqlite3.obj" />
+		<lib path="winmm.lib" />
+		<lib path="ws2_32.lib" />
+	</libs>
+	<folders>
+		<folder path="dcrypt" />
+		<folder path="aahz" />
+		<folder path="Default" />
+		<folder path="client" />
+	</folders>
+</project>

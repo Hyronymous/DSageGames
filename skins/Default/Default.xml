@@ -1,0 +1,383 @@
+<skin>
+	<images>
+		<image name="bottom"				file="bottom.tif" />
+		<image name="bottomleft"			file="bottomleft.tif" />
+		<image name="bottomleft_sizable"	file="bottomleft_sizable.tif" />
+		<image name="bottomright"			file="bottomright.tif" />
+		<image name="bottomright_sizable"	file="bottomright_sizable.tif" />
+		<image name="close"					file="close.tif" />
+		<image name="close_pressed"			file="close_pressed.tif" />
+		<image name="lock"					file="lock.tif" />
+		<image name="lock_pressed"			file="lock_pressed.tif" />
+		<image name="minimize"				file="minimize.tif" />
+		<image name="minimize_pressed"		file="minimize_pressed.tif" />
+		<image name="side"					file="side.tif" />
+		<image name="side_sizable"			file="side_sizable.tif" />
+		<image name="top"					file="top.tif" />
+		<image name="topleft"				file="topleft.tif" />
+		<image name="topleft_sizable"		file="topleft_sizable.tif" />
+		<image name="topright"				file="topright.tif" />
+		<image name="topright_sizable"		file="topright_sizable.tif" />
+		
+		<image name="btn_left"				file="btn_left.tif" />
+		<image name="btn_middle"			file="btn_middle.tif" />
+		<image name="btn_right"				file="btn_right.tif" />
+		<image name="btn_left_pressed"		file="btn_left_pressed.tif" />
+		<image name="btn_middle_pressed"	file="btn_middle_pressed.tif" />
+		<image name="btn_right_pressed"		file="btn_right_pressed.tif" />
+
+		<image name="scrl_block"				file="scrl_block.tif" />
+		<image name="scrl_down"					file="scrl_down.tif" />
+		<image name="scrl_down_block"			file="scrl_down_block.tif" />
+		<image name="scrl_down_pressed"			file="scrl_down_pressed.tif" />
+		<image name="scrl_down_pressed_block"	file="scrl_down_pressed_block.tif" />
+		<image name="scrl_h"					file="scrl_h.tif" />
+		<image name="scrl_h_left"				file="scrl_h_left.tif" />
+		<image name="scrl_h_left_pressed"		file="scrl_h_left_pressed.tif" />
+		<image name="scrl_h_middle"				file="scrl_h_middle.tif" />
+		<image name="scrl_h_right"				file="scrl_h_right.tif" />
+		<image name="scrl_h_right_pressed"		file="scrl_h_right_pressed.tif" />
+		<image name="scrl_left"					file="scrl_left.tif" />
+		<image name="scrl_left_pressed"			file="scrl_left_pressed.tif" />
+		<image name="scrl_right"				file="scrl_right.tif" />
+		<image name="scrl_right_pressed"		file="scrl_right_pressed.tif" />
+		<image name="scrl_up"					file="scrl_up.tif" />
+		<image name="scrl_up_pressed"			file="scrl_up_pressed.tif" />
+		<image name="scrl_v"					file="scrl_v.tif" />
+		<image name="scrl_v_bottom"				file="scrl_v_bottom.tif" />
+		<image name="scrl_v_bottom_pressed"		file="scrl_v_bottom_pressed.tif" />
+		<image name="scrl_v_middle"				file="scrl_v_middle.tif" />
+		<image name="scrl_v_top"				file="scrl_v_top.tif" />
+		<image name="scrl_v_top_pressed"		file="scrl_v_top_pressed.tif" />
+		
+		<image name="textinput_side"	file="textinput_side.tif" />
+		<image name="textinput_middle"	file="textinput_middle.tif" />
+	</images>
+	
+	<textinput font="Sans-Serif" font-size="15" font-style="nb" font-color="ffffff" text-bottom="3">
+		<left normal="textinput_side" focus="textinput_side" />
+		<middle normal="textinput_middle" focus="textinput_middle" />
+		<right normal="textinput_side" focus="textinput_side" />
+	</textinput>
+	
+	<scrollbar>
+		<horizontal>
+			<left normal="scrl_left" hover="scrl_left" pressed="scrl_left_pressed" />
+			<h-middle normal="scrl_h" hover="scrl_h" pressed="scrl_h" />
+			<right normal="scrl_right" hover="scrl_right" pressed="scrl_right_pressed" />
+			<scroll-left normal="scrl_h_left" hover="scrl_h_left" pressed="scrl_h_left_pressed" />
+			<scroll-h-middle normal="scrl_h_middle" hover="scrl_h_middle" pressed="scrl_h_middle" />
+			<scroll-right normal="scrl_h_right" hover="scrl_h_right" pressed="scrl_h_right_pressed" />
+		</horizontal>
+		<vertical>
+			<top normal="scrl_up" hover="scrl_up" pressed="scrl_up_pressed" />
+			<v-middle normal="scrl_v" hover="scrl_v" pressed="scrl_v" />
+			<bottom normal="scrl_down" hover="scrl_down" pressed="scrl_down_pressed" />
+			<scroll-top normal="scrl_v_top" hover="scrl_v_top" pressed="scrl_v_top_pressed" />
+			<scroll-v-middle normal="scrl_v_middle" hover="scrl_v_middle" pressed="scrl_v_middle" />
+			<scroll-bottom normal="scrl_v_bottom" hover="scrl_v_bottom" pressed="scrl_v_bottom_pressed" />
+		</vertical>
+		<both>
+			<left normal="scrl_left" hover="scrl_left" pressed="scrl_left_pressed" />
+			<h-middle normal="scrl_h" hover="scrl_h" pressed="scrl_h" />
+			<right normal="scrl_right" hover="scrl_right" pressed="scrl_right_pressed" />
+			<scroll-left normal="scrl_h_left" hover="scrl_h_left" pressed="scrl_h_left_pressed" />
+			<scroll-h-middle normal="scrl_h_middle" hover="scrl_h_middle" pressed="scrl_h_middle" />
+			<scroll-right normal="scrl_h_right" hover="scrl_h_right" pressed="scrl_h_right_pressed" />
+		
+			<top normal="scrl_up" hover="scrl_up" pressed="scrl_up_pressed" />
+			<v-middle normal="scrl_v" hover="scrl_v" pressed="scrl_v" />
+			<bottom normal="scrl_down_block" hover="scrl_down_block" pressed="scrl_down_pressed_block" />
+			<scroll-top normal="scrl_v_top" hover="scrl_v_top" pressed="scrl_v_top_pressed" />
+			<scroll-v-middle normal="scrl_v_middle" hover="scrl_v_middle" pressed="scrl_v_middle" />
+			<scroll-bottom normal="scrl_v_bottom" hover="scrl_v_bottom" pressed="scrl_v_bottom_pressed" />
+			
+			<block image="scrl_block" />
+		</both>
+	</scrollbar>
+	
+	<button font="Sans-Serif" font-size="15" font-style="nb" font-color="000000" text-bottom="3">
+		<left normal="btn_left" hover="btn_left" pressed ="btn_left_pressed" />
+		<middle normal="btn_middle" hover="btn_middle" pressed ="btn_middle_pressed" />
+		<right normal="btn_right" hover="btn_right" pressed ="btn_right_pressed" />
+	</button>
+	
+	<window title-font="Sans-Serif" title-size="18" title-color="ffffff" title-style="nb" title-left="5" title-bottom="5" min-width="120" min-height="70">
+		<resizable size="6">
+			<lockable>
+				<minimizable>
+					<closable>
+						<top-left image="topleft_sizable" />
+						<top image="top" />
+						<top-right image="topright_sizable" />
+						
+						<left image="side_sizable" />
+						<right image="side_sizable" />
+						
+						<bottom-left image="bottomleft_sizable" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright_sizable" />
+						
+						<close normal="close" hover="close" pressed="close_pressed" h="right:-6" v="top:-6" />
+						<minimize normal="minimize" hover="minimize" pressed="minimize_pressed" h="right:-32" v="top:-6" />
+						<lock unlocked="lock" unlocked-pressed="lock_pressed" unlocked-hover="lock" locked="lock_pressed" locked-pressed="lock_pressed" locked-hover="lock_pressed" h="left:6" v="top:-6" />
+						<title h="left:32" v="bottom:0" width="-90" height="30" />
+					</closable>
+					<non-closable>
+						<top-left image="topleft_sizable" />
+						<top image="top" />
+						<top-right image="topright_sizable" />
+						
+						<left image="side_sizable" />
+						<right image="side_sizable" />
+						
+						<bottom-left image="bottomleft_sizable" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright_sizable" />
+						
+						<minimize normal="minimize" hover="minimize" pressed="minimize_pressed" h="right:-6" v="top:-6" />
+						<lock unlocked="lock" unlocked-pressed="lock_pressed" unlocked-hover="lock" locked="lock_pressed" locked-pressed="lock_pressed" locked-hover="lock_pressed" h="left:6" v="top:-6" />
+						<title h="left:32" v="bottom:0" width="-64" height="30" />
+					</non-closable>
+				</minimizable>
+				<non-minimizable>
+					<closable>
+						<top-left image="topleft_sizable" />
+						<top image="top" />
+						<top-right image="topright_sizable" />
+						
+						<left image="side_sizable" />
+						<right image="side_sizable" />
+						
+						<bottom-left image="bottomleft_sizable" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright_sizable" />
+						
+						<close normal="close" hover="close" pressed="close_pressed" h="right:-6" v="top:-6" />
+						<lock unlocked="lock" unlocked-pressed="lock_pressed" unlocked-hover="lock" locked="lock_pressed" locked-pressed="lock_pressed" locked-hover="lock_pressed" h="left:6" v="top:-6" />
+						<title h="left:32" v="bottom:0" width="-64" height="30" />
+					</closable>
+					<non-closable>
+						<top-left image="topleft_sizable" />
+						<top image="top" />
+						<top-right image="topright_sizable" />
+						
+						<left image="side_sizable" />
+						<right image="side_sizable" />
+						
+						<bottom-left image="bottomleft_sizable" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright_sizable" />
+						
+						<lock unlocked="lock" unlocked-pressed="lock_pressed" unlocked-hover="lock" locked="lock_pressed" locked-pressed="lock_pressed" locked-hover="lock_pressed" h="left:6" v="top:-6" />
+						<title h="left:32" v="bottom:0" width="-38" height="30" />
+					</non-closable>
+				</non-minimizable>
+			</lockable>
+			<non-lockable>
+				<minimizable>
+					<closable>
+						<top-left image="topleft_sizable" />
+						<top image="top" />
+						<top-right image="topright_sizable" />
+						
+						<left image="side_sizable" />
+						<right image="side_sizable" />
+						
+						<bottom-left image="bottomleft_sizable" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright_sizable" />
+						
+						<close normal="close" hover="close" pressed="close_pressed" h="right:-6" v="top:-6" />
+						<minimize normal="minimize" hover="minimize" pressed="minimize_pressed" h="right:-32" v="top:-6" />
+						<title h="left:6" v="bottom:0" width="-64" height="30" />
+					</closable>
+					<non-closable>
+						<top-left image="topleft_sizable" />
+						<top image="top" />
+						<top-right image="topright_sizable" />
+						
+						<left image="side_sizable" />
+						<right image="side_sizable" />
+						
+						<bottom-left image="bottomleft_sizable" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright_sizable" />
+						
+						<minimize normal="minimize" hover="minimize" pressed="minimize_pressed" h="right:-32" v="top:-6" />
+						<title h="left:6" v="bottom:0" width="-38" height="30" />
+					</non-closable>
+				</minimizable>
+				<non-minimizable>
+					<closable>
+						<top-left image="topleft_sizable" />
+						<top image="top" />
+						<top-right image="topright_sizable" />
+						
+						<left image="side_sizable" />
+						<right image="side_sizable" />
+						
+						<bottom-left image="bottomleft_sizable" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright_sizable" />
+						
+						<close normal="close" hover="close" pressed="close_pressed" h="right:-6" v="top:-6" />
+						<title h="left:6" v="bottom:0" width="-38" height="30" />
+					</closable>
+					<non-closable>
+						<top-left image="topleft_sizable" />
+						<top image="top" />
+						<top-right image="topright_sizable" />
+						
+						<left image="side_sizable" />
+						<right image="side_sizable" />
+						
+						<bottom-left image="bottomleft_sizable" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright_sizable" />
+						
+						<title h="left:6" v="bottom:0" width="-12" height="30" />
+					</non-closable>
+				</non-minimizable>
+			</non-lockable>
+		</resizable>
+		<non-resizable>
+			<lockable>
+				<minimizable>
+					<closable>
+						<top-left image="topleft" />
+						<top image="top" />
+						<top-right image="topright" />
+						
+						<left image="side" />
+						<right image="side" />
+						
+						<bottom-left image="bottomleft" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright" />
+						
+						<close normal="close" hover="close" pressed="close_pressed" h="right:-6" v="top:-6" />
+						<minimize normal="minimize" hover="minimize" pressed="minimize_pressed" h="right:-32" v="top:-6" />
+						<lock unlocked="lock" unlocked-pressed="lock_pressed" unlocked-hover="lock" locked="lock_pressed" locked-pressed="lock_pressed" locked-hover="lock_pressed" h="left:6" v="top:-6" />
+						<title h="left:32" v="bottom:0" width="-90" height="30" />
+					</closable>
+					<non-closable>
+						<top-left image="topleft" />
+						<top image="top" />
+						<top-right image="topright" />
+						
+						<left image="side" />
+						<right image="side" />
+						
+						<bottom-left image="bottomleft" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright" />
+						
+						<minimize normal="minimize" hover="minimize" pressed="minimize_pressed" h="right:-6" v="top:-6" />
+						<lock unlocked="lock" unlocked-pressed="lock_pressed" unlocked-hover="lock" locked="lock_pressed" locked-pressed="lock_pressed" locked-hover="lock_pressed" h="left:6" v="top:-6" />
+						<title h="left:32" v="bottom:0" width="-64" height="30" />
+					</non-closable>
+				</minimizable>
+				<non-minimizable>
+					<closable>
+						<top-left image="topleft" />
+						<top image="top" />
+						<top-right image="topright" />
+						
+						<left image="side" />
+						<right image="side" />
+						
+						<bottom-left image="bottomleft" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright" />
+						
+						<close normal="close" hover="close" pressed="close_pressed" h="right:-6" v="top:-6" />
+						<lock unlocked="lock" unlocked-pressed="lock_pressed" unlocked-hover="lock" locked="lock_pressed" locked-pressed="lock_pressed" locked-hover="lock_pressed" h="left:6" v="top:-6" />
+						<title h="left:32" v="bottom:0" width="-64" height="30" />
+					</closable>
+					<non-closable>
+						<top-left image="topleft" />
+						<top image="top" />
+						<top-right image="topright" />
+						
+						<left image="side" />
+						<right image="side" />
+						
+						<bottom-left image="bottomleft" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright" />
+						
+						<lock unlocked="lock" unlocked-pressed="lock_pressed" unlocked-hover="lock" locked="lock_pressed" locked-pressed="lock_pressed" locked-hover="lock_pressed" h="left:6" v="top:-6" />
+						<title h="left:32" v="bottom:0" width="-38" height="30" />
+					</non-closable>
+				</non-minimizable>
+			</lockable>
+			<non-lockable>
+				<minimizable>
+					<closable>
+						<top-left image="topleft" />
+						<top image="top" />
+						<top-right image="topright" />
+						
+						<left image="side" />
+						<right image="side" />
+						
+						<bottom-left image="bottomleft" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright" />
+						
+						<close normal="close" hover="close" pressed="close_pressed" h="right:-6" v="top:-6" />
+						<minimize normal="minimize" hover="minimize" pressed="minimize_pressed" h="right:-32" v="top:-6" />
+						<title h="left:6" v="bottom:0" width="-64" height="30" />
+					</closable>
+					<non-closable>
+						<top-left image="topleft" />
+						<top image="top" />
+						<top-right image="topright" />
+						
+						<left image="side" />
+						<right image="side" />
+						
+						<bottom-left image="bottomleft" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright" />
+						
+						<minimize normal="minimize" hover="minimize" pressed="minimize_pressed" h="right:-32" v="top:-6" />
+						<title h="left:6" v="bottom:0" width="-38" height="30" />
+					</non-closable>
+				</minimizable>
+				<non-minimizable>
+					<closable>
+						<top-left image="topleft" />
+						<top image="top" />
+						<top-right image="topright" />
+						
+						<left image="side" />
+						<right image="side" />
+						
+						<bottom-left image="bottomleft" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright" />
+						
+						<close normal="close" hover="close" pressed="close_pressed" h="right:-6" v="top:-6" />
+						<title h="left:6" v="bottom:0" width="-38" height="30" />
+					</closable>
+					<non-closable>
+						<top-left image="topleft" />
+						<top image="top" />
+						<top-right image="topright" />
+						
+						<left image="side" />
+						<right image="side" />
+						
+						<bottom-left image="bottomleft" />
+						<bottom image="bottom" />
+						<bottom-right image="bottomright" />
+						
+						<title h="left:6" v="bottom:0" width="-12" height="30" />
+					</non-closable>
+				</non-minimizable>
+			</non-lockable>
+		</non-resizable>
+	</window>
+</skin>
